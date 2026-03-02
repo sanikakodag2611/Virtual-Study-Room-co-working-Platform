@@ -1,25 +1,49 @@
+require("dotenv").config();
+
 const express = require("express");
-const dotenv = require("dotenv");
-const connectDB = require("./config/db");
+const mongoose = require("mongoose");
+const cors = require("cors");
+const passport = require("passport");
+const session = require("express-session");    
+const { Server } = require("socket.io");
+require("./config/passport");
 
-dotenv.config();   
-
-connectDB();
+const authRoutes = require("./routes/authRoutes");
 
 const app = express();
+
+// Middleware
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true,
+  })
+);
+
 app.use(express.json());
-app.use("/api/users", require("./routes/userRoutes"));
 
-app.get("/", (req, res) => {
-  res.send("Server Running 🚀");
-});
+app.use(
+  session({
+    secret: "secretkey",
+    resave: false,
+    saveUninitialized: true,
+  })
+);
 
+app.use(passport.initialize());
+app.use(passport.session());
 
+// Routes
+app.use("/api/auth", authRoutes);
 
-const PORT = process.env.PORT || 5000;
-
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
-
-
+ 
+mongoose
+  .connect(process.env.MONGO_URI)
+  .then(() => {
+    console.log("MongoDB Connected");
+    app.listen(process.env.PORT, () =>
+      console.log(`Server running on port ${process.env.PORT}`)
+    );
+  })
+  .catch((err) => console.log(err));
